@@ -1,78 +1,137 @@
 import React, { Component } from "react";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { connect } from "react-redux";
+import { setCurrentUser } from "./redux/user/user.actions";
+import {
+  setTasks,
+  addTask,
+  deleteTask,
+  toggleTaskCompletion,
+  setNewTaskDescription
+} from "./redux/task/task.actions";
 import "./App.css";
-import { Task } from "./components/tasks/task.component";
+import Task from "./components/tasks/task.component";
+import Header from "./components/header/header.component";
+import SignIn from "./components/signIn/sign-in.component";
+import SignUp from "./components/signUp/sign-up.component";
+import { auth, createUserProfileDocument } from "./firebase/firebase.utils";
+import { getDoc } from "firebase/firestore";
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      tasks: [],
-      newTaskDescription: "",
-    };
-  }
   componentDidMount() {
+    this.unsubscribeFromAuth = auth.onAuthStateChanged(async (userAuth) => {
+      if (userAuth) {
+        const userRef = await createUserProfileDocument(userAuth);
+
+        const userSnapshot = await getDoc(userRef);
+        if (userSnapshot.exists()) {
+          this.props.setCurrentUser({
+            id: userSnapshot.id,
+            ...userSnapshot.data(),
+          });
+        }
+      } else {
+        this.props.setCurrentUser(null); // Handle signed-out user
+      }
+    });
+
+    // Fetch tasks from localStorage
     const storedTask = localStorage.getItem("tasks");
     if (storedTask) {
-      this.setState({ tasks: JSON.parse(storedTask) });
-    }
-  }
-  componentDidUpdate(prevProps, prevState) {
-    if (prevProps.tasks !== this.state.tasks) {
-      localStorage.setItem("tasks", JSON.stringify(this.state.tasks));
+      this.props.setTasks(JSON.parse(storedTask)); // Set tasks via Redux
     }
   }
 
-  //method to handle input change
+  componentWillUnmount() {
+    // Unsubscribe from auth listener
+    this.unsubscribeFromAuth();
+  }
+
+  componentDidUpdate(prevProps) {
+    // Sync tasks with localStorage whenever tasks change
+    if (prevProps.tasks !== this.props.tasks) {
+      localStorage.setItem("tasks", JSON.stringify(this.props.tasks));
+    }
+  }
+
   handleInputChange = (event) => {
-    this.setState({ newTaskDescription: event.target.value });
+    this.props.setNewTaskDescription(event.target.value);
   };
 
-  //Method to add new Task
   addTask = () => {
-    if (this.state.newTaskDescription.trim() === "") {
+    if (this.props.newTaskDescription.trim() === "") {
       return;
     }
 
     const newTask = {
-      id: this.state.tasks.length + 1,
-      description: this.state.newTaskDescription.trim(),
+      id: this.props.tasks.length + 1,
+      description: this.props.newTaskDescription.trim(),
       completed: false,
     };
-    this.setState((prevState) => ({
-      tasks: [...prevState.tasks, newTask],
-      newTaskDescription: "",
-    }));
+
+    this.props.addTask(newTask); // Add task via Redux
+    this.props.setNewTaskDescription(""); // Clear input field
   };
-  //method to toggle task completion
+
   toggleTaskCompletion = (id) => {
-    const updatedTasks = this.state.tasks.map((task) => {
-      console.log(task.id, id, task.id === id);
-      return task.id === id ? { ...task, completed: !task.completed } : task;
-    });
-    console.log("updated task",updatedTasks)
-    this.setState({ tasks: updatedTasks });
-   
+    this.props.toggleTaskCompletion(id); // Toggle task completion via Redux
   };
+
   deleteTask = (id) => {
-    const filterdTasks = this.state.tasks.filter((task) => task.id !== id);
-    this.setState({ tasks: filterdTasks });
+    this.props.deleteTask(id); // Delete task via Redux
   };
 
   render() {
-    const sortedTasks = this.state.tasks.sort((a,b) => a.completed - b.completed) 
+    const { currentUser, tasks = [], newTaskDescription } = this.props;
+
+    const sortedTasks = tasks.sort((a, b) => a.completed - b.completed);
+
     return (
-      <div className="App">
-        <Task
-          tasks={sortedTasks}
-          newTaskDescription={this.state.newTaskDescription}
-          handleInputChange={this.handleInputChange}
-          addTask={this.addTask}
-          toggleTaskCompletion={this.toggleTaskCompletion}
-          deleteTask={this.deleteTask}
-        />
-      </div>
+      <Router>
+        <div className="App">
+          <Header />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Task
+                  tasks={sortedTasks}
+                  newTaskDescription={newTaskDescription}
+                  handleInputChange={this.handleInputChange}
+                  addTask={this.addTask}
+                  toggleTaskCompletion={this.toggleTaskCompletion}
+                  deleteTask={this.deleteTask}
+                />
+              }
+            />
+            <Route
+              path="/signin"
+              element={currentUser ? <Navigate to="/" /> : <SignIn />}
+            />
+            <Route
+              path="/signup"
+              element={currentUser ? <Navigate to="/" /> : <SignUp />}
+            />
+          </Routes>
+        </div>
+      </Router>
     );
   }
 }
-export default App;
+
+const mapStateToProps = (state) => ({
+  currentUser: state.user.currentUser,
+  tasks: state.task.tasks,
+  newTaskDescription: state.task.newTaskDescription,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  setCurrentUser: (user) => dispatch(setCurrentUser(user)),
+  setTasks: (tasks) => dispatch(setTasks(tasks)),
+  addTask: (task) => dispatch(addTask(task)),
+  deleteTask: (taskId) => dispatch(deleteTask(taskId)),
+  toggleTaskCompletion: (taskId) => dispatch(toggleTaskCompletion(taskId)),
+  setNewTaskDescription: (description) => dispatch(setNewTaskDescription(description)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);

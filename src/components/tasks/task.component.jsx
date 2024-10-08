@@ -1,7 +1,7 @@
 import React from "react";
 import "./task.component.style.scss";
 
-export const Task = (props) => {
+const Task = (props) => {
   const {
     tasks,
     handleInputChange,
@@ -13,7 +13,6 @@ export const Task = (props) => {
   return (
     <div className="container">
       <div className="sub-container">
-        <h1>Task Tracker</h1>
         <div className="input-container">
           <input
             className="text-field"
@@ -52,3 +51,5 @@ export const Task = (props) => {
     </div>
   );
 };
+
+export default Task

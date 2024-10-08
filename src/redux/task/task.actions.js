@@ -10,14 +10,14 @@ export const addTask = (task) => ({
     payload: task,
 })
 
-export const deleteTask = (taskId) => ({
+export const deleteTask = (id) => ({
     type: TaskActionTypes.DELETE_TASK,
-    payload: taskId,
+    payload: id,
 })
 
-export const toggleTaskCompletion = (taskId) => ({
+export const toggleTaskCompletion = (id) => ({
     type: TaskActionTypes.TOGGLE_TASK_COMPLETION,
-    payload: taskId,
+    payload: id,
 })
 
 export const setNewTaskDescription = (description) => ({

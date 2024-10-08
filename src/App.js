@@ -16,6 +16,8 @@ import SignIn from "./components/signIn/sign-in.component";
 import SignUp from "./components/signUp/sign-up.component";
 import { auth, createUserProfileDocument } from "./firebase/firebase.utils";
 import { getDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
+
 
 class App extends Component {
   componentDidMount() {
@@ -64,7 +66,7 @@ class App extends Component {
     }
 
     const newTask = {
-      id: this.props.tasks.length + 1,
+      id: uuidv4(),
       description: this.props.newTaskDescription.trim(),
       completed: false,
     };
@@ -99,8 +101,8 @@ class App extends Component {
                   newTaskDescription={newTaskDescription}
                   handleInputChange={this.handleInputChange}
                   addTask={this.addTask}
-                  toggleTaskCompletion={this.toggleTaskCompletion}
-                  deleteTask={this.deleteTask}
+                  toggleTaskCompletion = {(id)=>this.toggleTaskCompletion(id)}
+                  deleteTask={(id)=>this.deleteTask(id)}
                 />
               }
             />
@@ -129,8 +131,8 @@ const mapDispatchToProps = (dispatch) => ({
   setCurrentUser: (user) => dispatch(setCurrentUser(user)),
   setTasks: (tasks) => dispatch(setTasks(tasks)),
   addTask: (task) => dispatch(addTask(task)),
-  deleteTask: (taskId) => dispatch(deleteTask(taskId)),
-  toggleTaskCompletion: (taskId) => dispatch(toggleTaskCompletion(taskId)),
+  deleteTask: (id) => dispatch(deleteTask(id)),
+  toggleTaskCompletion: (id) => dispatch(toggleTaskCompletion(id)),
   setNewTaskDescription: (description) => dispatch(setNewTaskDescription(description)),
 });
 
